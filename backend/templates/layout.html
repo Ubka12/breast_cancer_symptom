@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}{% endblock %} | Breast Symptom Checker</title>
+
+  <!-- Google Font: Inter (just replacing Work Sans) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Site CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="nav-left">
+      <a href="{{ url_for('home') }}" class="nav-logo">Breast Symptom Checker</a>
+    </div>
+    <div class="nav-links">
+      {% set path = request.path %}
+      <a href="{{ url_for('home') }}"      {% if path=='/' %}aria-current="page"{% endif %}>Home</a>
+      <a href="{{ url_for('about') }}"     {% if path.startswith('/about') %}aria-current="page"{% endif %}>About</a>
+      <a href="{{ url_for('symptoms') }}"  {% if path.startswith('/symptoms') %}aria-current="page"{% endif %}>Symptoms</a>
+      <a href="{{ url_for('selfcheck') }}" {% if path.startswith('/selfcheck') %}aria-current="page"{% endif %}>Self-Check Guide</a>
+      <a href="{{ url_for('support') }}"   {% if path.startswith('/support') %}aria-current="page"{% endif %}>Support</a>
+      <a href="{{ url_for('disclaimer') }}" {% if path.startswith('/disclaimer') %}aria-current="page"{% endif %}>Disclaimer</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    © 2025 Breast Symptom Checker — informational only, not a diagnosis. If worried, contact your GP or NHS 111.
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

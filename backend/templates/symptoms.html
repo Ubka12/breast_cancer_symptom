@@ -1,0 +1,118 @@
+{% extends "layout.html" %}
+{% block title %}Symptoms{% endblock %}
+
+{% block content %}
+
+<section class="section">
+  <h1>Common breast changes</h1>
+  <p class="lead">Not a complete list, these are examples people often mention. If something feels unusual for you, use the checker and consider medical advice.</p>
+
+  <!-- icon list -->
+  <ul class="icon-list">
+    <li>
+      <span class="il-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </span>
+      New lump or thickening (breast or underarm)
+    </li>
+    <li>
+      <span class="il-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12h18M4 8h16M6 16h12"></path>
+        </svg>
+      </span>
+      Change in size, shape, or feel
+    </li>
+    <li>
+      <span class="il-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 16l3-4 4 6 4-5 3 3 4-6"></path>
+        </svg>
+      </span>
+      Redness, rash, heat, or swelling
+    </li>
+    <li>
+      <span class="il-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 14c4-6 12-6 16 0"></path>
+        </svg>
+      </span>
+      Dimpling or puckering of the skin
+    </li>
+    <li>
+      <span class="il-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 4v16M9 7l3-3 3 3"></path>
+        </svg>
+      </span>
+      Nipple changes (inversion, new crusting)
+    </li>
+    <li>
+      <span class="il-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 3v6m0 6v6M8 12h8"></path>
+        </svg>
+      </span>
+      Nipple discharge (especially clear or bloody)
+    </li>
+    <li>
+      <span class="il-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 12h12"></path>
+        </svg>
+      </span>
+      Persistent pain or new tenderness
+    </li>
+    <li>
+      <span class="il-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="4" y="4" width="16" height="16" rx="3"></rect>
+          <path d="M6 14c3-4 9-4 12 0"></path>
+        </svg>
+      </span>
+      Skin that looks like “peau d’orange” (orange-peel texture)
+    </li>
+  </ul>
+</section>
+
+<!-- reassurance + education cards -->
+<section class="section">
+  <div class="grid-3">
+    <div class="card">
+      <h3>Not every change is cancer</h3>
+      <p>Many breast changes are normal or harmless. The checker helps you describe what’s going on so you can decide next steps with more confidence.</p>
+    </div>
+    <div class="card">
+      <h3>Know your normal</h3>
+      <p>Breasts vary across the month and over time. What matters is noticing what’s <em>new for you</em> or doesn’t settle.</p>
+    </div>
+    <div class="card">
+      <h3>Plain-English results</h3>
+      <p>We use clear language and show how we reached the suggestion, so you’re not left guessing.</p>
+    </div>
+  </div>
+</section>
+
+<!-- when to seek help -->
+<section class="section">
+  <div class="callout callout-urgent">
+    <div class="callout-icon" aria-hidden="true">
+      <!-- alert -->
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12" y2="17"></line>
+      </svg>
+    </div>
+    <div>
+      <h3 style="margin:0 0 .25rem;">When to seek medical advice</h3>
+      <p style="margin:0;">
+        If you notice a new lump, skin changes that don’t go away, nipple changes or discharge, or anything that feels unusual for you, please contact your GP or NHS 111. If you’re unsure, it’s okay to ask earlier advice is always better.
+      </p>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

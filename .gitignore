@@ -1,0 +1,7 @@
+﻿ .env
+.env
+venv/
+__pycache__/
+*.npz
+*.pt
+*.sqlite

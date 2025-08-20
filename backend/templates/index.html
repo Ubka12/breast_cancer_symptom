@@ -1,0 +1,128 @@
+{% extends "layout.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<!-- Page-scoped styles (kept tiny and self-contained) -->
+<style>
+  /* Layout */
+  .home-hero {
+    max-width: 980px;         /* narrower page */
+    margin: 0 auto;
+    padding: 28px 18px 8px;
+    display: grid;
+    grid-template-columns: 1.05fr .95fr;
+    gap: 24px;
+    align-items: center;
+  }
+  @media (max-width: 980px) {
+    .home-hero { grid-template-columns: 1fr; }
+  }
+
+  /* Left column */
+  .home-copy h1 {
+    font-size: 2rem;          /* smaller title */
+    line-height: 1.1;
+    margin: 0 0 .6rem;
+  }
+  .home-copy p.lede {
+    margin: 0 0 1rem;
+    color: var(--text-secondary, #586271);
+    font-size: 1rem;
+    max-width: 62ch;
+  }
+
+  /* Form card */
+  .home-form {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 14px;
+    padding: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.06);
+    max-width: 720px;
+  }
+  .home-form label {
+    display: block;
+    font-weight: 600;
+    margin: 2px 0 8px;
+  }
+  .home-form textarea {
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    border: 1px solid rgba(0,0,0,.12);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 1rem;
+    background: #fff;
+  }
+  .home-form .hint {
+    margin: 8px 0 0;
+    font-size: .95rem;
+    color: var(--text-secondary, #586271);
+  }
+  .home-form .actions {
+    margin-top: 10px;
+  }
+  .home-form .btn-primary {
+    display: inline-block;
+    background: var(--brand, #0e8ca1);
+    color: #fff;
+    border: 0;
+    border-radius: 10px;
+    padding: .75rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .home-form .btn-primary:hover { filter: brightness(.97); }
+
+  /* Right column image */
+  .home-visual img {
+    width: 100%;
+    border-radius: 16px;
+    display: block;
+    object-fit: cover;
+    box-shadow: 0 14px 34px rgba(0,0,0,.12);
+  }
+
+  /* results block (uses your existing JS IDs) */
+  #result { margin-top: 12px; }
+</style>
+
+<section class="home-hero">
+  <!-- Left: copy + form -->
+  <div class="home-copy">
+    <h1>Breast Symptom Checker</h1>
+    <p class="lede">
+      Describe your symptoms in your own words to get calm, easy-to-understand guidance.
+      This is not a diagnosis, it simply helps you consider next steps.
+    </p>
+
+    <form id="symptom-form" class="home-form" aria-label="Check symptoms">
+      <label for="symptoms">Describe your symptoms (in your own words)</label>
+      <textarea id="symptoms" name="symptoms"
+        placeholder="e.g. firm lump under the nipple, new dimpling, redness"></textarea>
+
+      <div class="actions">
+        <button type="submit" class="btn-primary">Check Symptoms</button>
+      </div>
+      <p class="hint">Everyday words are fine — no medical terms needed.</p>
+
+      <!-- Where your JS will write the response -->
+      <div id="result"></div>
+    </form>
+  </div>
+
+  <!-- Right: image -->
+  <div class="home-visual">
+    <img
+      src="{{ url_for('static', filename='img/holding-phone.jpg') }}"
+      alt="Person using a phone to check symptoms">
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
+{% endblock %}

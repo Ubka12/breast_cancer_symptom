@@ -1,0 +1,106 @@
+{% extends "layout.html" %}
+{% block title %}About{% endblock %}
+
+{% block content %}
+<section class="section">
+  <h1>About this tool</h1>
+  <p class="lead">
+    The Breast Symptom Checker turns everyday descriptions of breast changes into clear, accessible
+    guidance. It uses a transparent, layered method to help you understand what your symptoms could
+    mean and when it might be worth seeking medical advice. It is <strong>not</strong> a diagnostic tool.
+  </p>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <h2>How it works</h2>
+
+  <div class="feature-row">
+    <article class="feature">
+      <div class="feature-icon" aria-hidden="true">
+        <!-- magnifier -->
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </div>
+      <h3>Step 1 — Recognises key signs</h3>
+      <p>Looks for important words and phrases using <strong>explainable, rule-based logic</strong> so results are transparent.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon" aria-hidden="true">
+        <!-- connect dots -->
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="5" cy="12" r="2"></circle>
+          <circle cx="12" cy="5" r="2"></circle>
+          <circle cx="19" cy="12" r="2"></circle>
+          <line x1="7" y1="12" x2="10" y2="7"></line>
+          <line x1="14" y1="7" x2="17" y2="12"></line>
+        </svg>
+      </div>
+      <h3>Step 2 — Understands your phrasing</h3>
+      <p>Matches your words to known symptom descriptions, even if you describe things differently.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon" aria-hidden="true">
+        <!-- lifebuoy -->
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <circle cx="12" cy="12" r="4"></circle>
+          <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line>
+          <line x1="19.07" y1="4.93" x2="14.83" y2="9.17"></line>
+          <line x1="4.93" y1="19.07" x2="9.17" y2="14.83"></line>
+          <line x1="19.07" y1="19.07" x2="14.83" y2="14.83"></line>
+        </svg>
+      </div>
+      <h3>Step 3 — Helpful in edge cases</h3>
+      <p>If input is unclear, it provides <strong>plain-language guidance</strong> so you still get a useful next step.</p>
+    </article>
+  </div>
+</section>
+
+<!-- WHY IT MATTERS -->
+<section class="section">
+  <h2>Why it matters</h2>
+
+  <div class="grid-3">
+    <div class="card">
+      <h3>Bridges the gap</h3>
+      <p>Many people delay seeking help because they’re unsure what symptoms mean. We make language
+         simple and clear.</p>
+    </div>
+    <div class="card">
+      <h3>Accessible to everyone</h3>
+      <p>Plain English, supportive tone, and inclusive design help people with different levels of
+         digital and health literacy.</p>
+    </div>
+    <div class="card">
+      <h3>Encourages early action</h3>
+      <p>Gentle, evidence-based prompts guide you toward the right next step if something doesn’t feel
+         normal for you.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRIVACY CALLOUT -->
+<section class="section">
+  <div class="callout">
+    <div class="callout-icon" aria-hidden="true">
+      <!-- shield -->
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 3l7 4v5c0 5-3.5 9-7 9s-7-4-7-9V7l7-4z"></path>
+        <path d="M9 12l2 2 4-4"></path>
+      </svg>
+    </div>
+    <div>
+      <h3 style="margin:0 0 .25rem;">Your privacy</h3>
+      <p style="margin:0;">
+        We don’t store or share what you type. Your input is used to produce a response for you and
+        then discarded.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}

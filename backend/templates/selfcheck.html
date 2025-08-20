@@ -1,0 +1,118 @@
+{% extends "layout.html" %}
+{% block title %}Self-Check Guide{% endblock %}
+
+{% block content %}
+
+<!-- Hero: intro + image -->
+<section class="section self-hero hero">
+  <div class="hero-text">
+    <h1>Breast Self-Check Guide</h1>
+    <p class="lead">
+      Checking your breasts regularly can help you notice changes early. This simple routine
+      takes just a few minutes each month. It’s not about diagnosing, it’s about
+      understanding what’s normal for you.
+    </p>
+  </div>
+
+  <!-- optional image: put a file at static/img/slef-check.jpg (no spaces) -->
+  <div class="hero-image-wrapper">
+    <img
+      src="{{ url_for('static', filename='img/slef-check.jpg') }}"
+      alt="Person performing a breast self-check"
+      class="hero-image"
+    >
+  </div>
+</section>
+
+<!-- Steps -->
+<section class="section">
+  <h2>Your monthly routine (5 steps)</h2>
+  <ol class="steps">
+    <li>
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Look in the mirror</h3>
+        <p>Stand with shoulders straight and hands on hips. Notice shape, size, or skin changes 
+           dimpling, puckering, redness, or rashes.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Raise your arms</h3>
+        <p>Lift both arms and look again for the same changes. Check that both sides move evenly.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Check the nipples</h3>
+        <p>Look for new inversion, crusting, or any fluid especially clear or bloody discharge.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3>Feel standing or sitting</h3>
+        <p>Using the pads of three fingers, move in small circles covering the whole breast and
+           underarm. Use light, then medium, then firm pressure.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3>Feel lying down</h3>
+        <p>Place a pillow under one shoulder and your hand behind your head. Repeat the circular
+           motions across the entire breast and armpit area.</p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<!-- Tips -->
+<section class="section">
+  <div class="grid-3">
+    <div class="card">
+      <h3>Pick a regular time</h3>
+      <p>Once a month is enough. If you have periods, check a few days after they end when breasts
+         are less tender.</p>
+    </div>
+    <div class="card">
+      <h3>Know your normal</h3>
+      <p>Breasts naturally change over time. You’re looking for what’s <em>new for you</em> or
+         doesn’t settle.</p>
+    </div>
+    <div class="card">
+      <h3>No perfect technique</h3>
+      <p>Don’t stress about doing it “right”. Being consistent matters more than being precise.</p>
+    </div>
+  </div>
+</section>
+
+<!-- When to seek help -->
+<section class="section">
+  <div class="callout callout-urgent">
+    <div class="callout-icon" aria-hidden="true">
+      <!-- alert icon -->
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12" y2="17"></line>
+      </svg>
+    </div>
+    <div>
+      <h3 style="margin:0 0 .25rem;">If you notice something unusual</h3>
+      <p style="margin:0;">
+        New lump or thickening, skin that dimples, nipple changes or discharge, redness or swelling
+        that doesn’t go away — please contact your GP or NHS 111. Most changes are not cancer, but
+        it’s always okay to ask.
+      </p>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

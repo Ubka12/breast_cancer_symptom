@@ -1,0 +1,76 @@
+{% extends "layout.html" %}
+{% block title %}Disclaimer{% endblock %}
+
+{% block content %}
+
+<section class="section disclaimer-pro">
+  <!-- Header -->
+  <header class="disclaimer-pro__head">
+    <div class="disclaimer-pro__icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V6l-8-4-8 4v6c0 6 8 10 8 10z"></path>
+      </svg>
+    </div>
+    <div>
+      <h1>Disclaimer</h1>
+      <p class="lead">This website provides general information only. It is not a medical device and does not provide a diagnosis.</p>
+    </div>
+  </header>
+
+  <!-- Summary card -->
+  <article class="card disclaimer-pro__card">
+    <p>
+      Always seek advice from your GP or another qualified professional about your health. If you think you may
+      need urgent care, call <strong>111</strong> (<a href="https://111.nhs.uk" target="_blank" rel="noopener">111.nhs.uk</a>), and for emergencies call <strong>999</strong>.
+    </p>
+  </article>
+
+  <!-- What this tool is / isn’t -->
+  <div class="disclaimer-pro__grid">
+    <article class="card disclaimer-pro__panel">
+      <h2>What this tool does</h2>
+      <ul class="tick">
+        <li>Helps you describe symptoms in everyday language.</li>
+        <li>Maps common phrases to clinically recognised signs.</li>
+        <li>Offers plain-English guidance and next steps based on NHS resources.</li>
+      </ul>
+    </article>
+
+    <article class="card disclaimer-pro__panel">
+      <h2>What this tool <span class="nope">does not</span> do</h2>
+      <ul class="cross">
+        <li>It does <strong>not</strong> diagnose or replace a clinician.</li>
+        <li>It does <strong>not</strong> provide treatment or clinical decisions.</li>
+        <li>It does <strong>not</strong> store personal medical records.</li>
+      </ul>
+    </article>
+  </div>
+
+  <!-- When to seek help -->
+  <div class="callout callout-urgent disclaimer-pro__callout" role="note" aria-label="When to seek help">
+    <div class="callout-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12" y2="17"></line>
+      </svg>
+    </div>
+    <div>
+      <strong>Seek medical advice promptly</strong> if you notice new or changing breast symptoms, or if anything
+      feels unusual for you. For urgent concerns call <a href="https://111.nhs.uk" target="_blank" rel="noopener">NHS 111</a>; for emergencies call <strong>999</strong>.
+    </div>
+  </div>
+
+  <!-- Privacy / data use -->
+  <article class="card disclaimer-pro__card">
+    <h2>Data &amp; privacy</h2>
+    <p>
+      Inputs are processed to generate guidance and are not stored on the server. Do not include names, contact
+      details or other identifiable information in free-text fields. See <a href="https://www.nhs.uk/your-nhs-data-matters/" target="_blank" rel="noopener">NHS: Your Data Matters</a> for official information about data use in healthcare.
+    </p>
+  </article>
+
+  <p class="updated">Last updated: Aug 2025</p>
+</section>
+
+{% endblock %}

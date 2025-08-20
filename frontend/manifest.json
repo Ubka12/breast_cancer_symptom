@@ -1,0 +1,12 @@
+{
+  "short_name": "SymptomCheck",
+  "name": "Breast Symptom Checker",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#b71c1c",
+  "icons": [
+    {"src": "logo192.png","sizes": "192x192","type": "image/png"},
+    {"src": "logo512.png","sizes": "512x512","type": "image/png"}
+  ]
+}

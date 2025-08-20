@@ -1,0 +1,58 @@
+[
+  {
+    "text": "bloody nipple discharge",
+    "risk": "HIGH"
+  },
+  {
+    "text": "new nipple inversion",
+    "risk": "LOW"
+  },
+  {
+    "text": "breast skin looks like orange peel (peau d'orange)",
+    "risk": "HIGH"
+  },
+  {
+    "text": "dimpling or puckering of the breast skin",
+    "risk": "HIGH"
+  },
+  {
+    "text": "redness or a new rash around the nipple",
+    "risk": "LOW"
+  },
+  {
+    "text": "thickening or hardening in part of the breast",
+    "risk": "LOW"
+  },
+  {
+    "text": "change in size or shape of one breast",
+    "risk": "MEDIUM"
+  },
+  {
+    "text": "lump in the breast",
+    "risk": "HIGH"
+  },
+  {
+    "text": "swelling or lump in the armpit",
+    "risk": "HIGH"
+  },
+  {
+    "text": "persistent breast pain not linked to periods",
+    "risk": "MEDIUM"
+  },
+  {
+    "text": "flaky or crusty skin on the nipple",
+    "risk": "LOW"
+  },
+  {
+    "text": "hot inflamed breast skin",
+    "risk": "LOW"
+  },
+  {
+    "text": "clear nipple discharge",
+    "risk": "LOW"
+  },
+  {
+    "text": "itchy breast skin",
+    "risk": "LOW"
+  }
+]
