@@ -1,10 +1,9 @@
-
 # backend/app.py
-
 import os
 import logging
 from flask import Flask, request, jsonify, render_template, abort
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
 
 # ----------------------------
 # Logging early (used by helpers)
@@ -20,7 +19,9 @@ try:
     load_dotenv()
 except Exception:
     pass
-# Optional kill switch so you can force-disable LLMs without touching keys
+
+# Optional LLM kill-switch (unused elsewhere but harmless to retain)
+_OPENAI_OK = True
 if os.getenv("DISABLE_LLM", "0") not in ("0", "", None):
     _OPENAI_OK = False
 
@@ -28,7 +29,10 @@ if os.getenv("DISABLE_LLM", "0") not in ("0", "", None):
 # Create app
 # ----------------------------
 app = Flask(__name__, static_folder="static", template_folder="templates")
-CORS(app)
+# Keep CORS open by default; you can restrict via env CORS_ORIGINS="http://localhost:3000"
+CORS(app, resources={r"/check": {"origins": os.getenv("CORS_ORIGINS", "*").split(",")}})
+# Small request cap; one or two sentences should fit well under 4 KB
+app.config["MAX_CONTENT_LENGTH"] = 4 * 1024
 
 # ----------------------------
 # Import local modules (both module and script modes)
@@ -72,9 +76,11 @@ except Exception as e:
     _local_t5_ok = False
     _t5_pipe = None
 
+
 def _safe_clip(text: str, limit: int = 600) -> str:
     text = (text or "").strip()
     return text[:limit]
+
 
 def llm_paraphrase(user_text: str) -> str | None:
     """
@@ -96,6 +102,7 @@ def llm_paraphrase(user_text: str) -> str | None:
         logger.warning("T5 paraphrase failed: %s", e)
         return None
 
+
 def _terms_from_matches(matches) -> str:
     """
     Robustly extract human-readable terms from matches which may be a list of
@@ -109,6 +116,7 @@ def _terms_from_matches(matches) -> str:
             out.append(str(m))
     return ", ".join(out)
 
+
 def _basic_explain_text(risk: str, matches=None, matched_reference=None, similarity=None) -> str:
     """Non-LLM fallback explanation in 1–2 plain sentences."""
     if matches:
@@ -118,6 +126,7 @@ def _basic_explain_text(risk: str, matches=None, matched_reference=None, similar
         sim_txt = f" (similarity {similarity:.2f})" if similarity is not None else ""
         return f"Your text was similar to known breast symptom descriptions{sim_txt}, so we showed {risk.title()} advice."
     return f"We could not match clear red-flag terms; we showed {risk.title()} advice for safety."
+
 
 def llm_explain(risk: str, matches=None, matched_reference=None, similarity=None) -> str | None:
     """
@@ -160,6 +169,7 @@ except Exception:
     _zsc_available = False
     zsc_pipeline = None  # type: ignore
 
+
 def get_zero_shot():
     """Lazy-load a small, fast NLI model for zero-shot classification."""
     global _zsc
@@ -174,58 +184,99 @@ def get_zero_shot():
 # ----------------------------
 # Constants
 # ----------------------------
-BERT_CONFIDENCE_THRESHOLD = 0.55  # conservative to avoid spurious matches
+# τ in the paper; configurable via env SBERT_TAU. Default 0.75
+BERT_CONFIDENCE_THRESHOLD = float(os.getenv("SBERT_TAU", "0.75"))
 BREAST_CONTEXT = ("breast", "nipple", "boob", "areola", "underarm", "armpit", "chest")
 
 # ----------------------------
-# Frontend pages
+# Global error handler (don’t convert 404s to 500s)
 # ----------------------------
+@app.errorhandler(Exception)
+def _any_error(e):
+    if isinstance(e, HTTPException):
+        return e  # let Flask return proper 4xx/5xx
+    logger.exception("Unhandled error: %s", e)
+    return jsonify(error="internal_error"), 500
+
+# ----------------------------
+# Frontend pages (with health checks)
+# ----------------------------
+@app.route("/healthz")
+def healthz():
+    return jsonify(status="ok"), 200
+
+@app.route("/health")
+def health():
+    return jsonify(status="ok"), 200
+
 @app.route("/")
 def home():
-    return render_template("index.html")
+    try:
+        return render_template("index.html")
+    except Exception:
+        return "OK", 200
 
 @app.route("/about")
 def about():
-    return render_template("about.html")
+    try:
+        return render_template("about.html")
+    except Exception:
+        return "About", 200
 
 @app.route("/disclaimer")
 def disclaimer():
-    return render_template("disclaimer.html")
+    try:
+        return render_template("disclaimer.html")
+    except Exception:
+        return "Disclaimer", 200
 
 @app.route("/selfcheck")
 def selfcheck():
-    return render_template("selfcheck.html")
+    try:
+        return render_template("selfcheck.html")
+    except Exception:
+        return "Self-check", 200
 
 @app.route("/support")
 def support():
-    return render_template("support.html")
+    try:
+        return render_template("support.html")
+    except Exception:
+        return "Support", 200
 
 @app.route("/symptoms")
 def symptoms():
-    return render_template("symptoms.html")
+    try:
+        return render_template("symptoms.html")
+    except Exception:
+        return "Symptoms", 200
 
 # Legacy direct-file routes (so /about.html etc. still work)
 @app.route("/index.html")
 def index_html():
-    return render_template("index.html")
+    return home()
 
 @app.route("/<page>.html")
 def legacy_html(page):
     allowed = {"index", "about", "symptoms", "selfcheck", "support", "disclaimer"}
     if page in allowed:
-        return render_template(f"{page}.html")
+        try:
+            return render_template(f"{page}.html")
+        except Exception:
+            return page, 200
     return abort(404)
 
 # ----------------------------
 # Advice text
 # ----------------------------
 def make_advice(risk: str) -> str:
-    if risk == "HIGH":
+    r = (risk or "").upper()
+    if r == "HIGH":
         return (
             "Some symptoms you described are considered red-flag signs. "
             "Please contact your GP or call NHS 111 this week."
         )
-    elif risk == "MEDIUM":
+    elif r in ("MEDIUM", "MODERATE"):
         return (
             "Your symptoms may need a GP check-up. "
             "Please seek medical advice if they persist or change."
@@ -266,7 +317,7 @@ def local_llm_symptom_score(text: str):
 # ----------------------------
 @app.route("/check", methods=["POST"])
 def check_symptoms():
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
     text = (data.get("symptoms") or "").strip()
 
     if not text or len(text) < 3:
@@ -294,29 +345,46 @@ def check_symptoms():
         ), 200
 
     # 2) SBERT fallback (only if available, confident, and breast context present)
-    bert_result = bert_symptom_score(text)
-    similarity = float(bert_result.get("similarity_score", 0.0) or 0.0)
-    bert_risk = (bert_result.get("risk") or "LOW").upper()
+    similarity = 0.0
+    bert_risk = "LOW"
+    matched_ref = ""
     has_context = any(w in text.lower() for w in BREAST_CONTEXT)
+
+    if _bert_available:
+        try:
+            bert_result = bert_symptom_score(text) or {}
+            similarity = float(bert_result.get("similarity_score") or 0.0)
+            bert_risk = str(bert_result.get("risk") or "LOW").upper()
+            matched_ref = str(bert_result.get("matched_reference") or "")
+        except Exception as e:
+            logger.exception("SBERT error: %s", e)
+            similarity = 0.0
+            bert_risk = "LOW"
+            matched_ref = ""
 
     if _bert_available and similarity >= BERT_CONFIDENCE_THRESHOLD and has_context:
         advice = make_advice(bert_risk)
-        explanation = llm_explain(
-            bert_risk, matched_reference=bert_result.get("matched_reference", ""), similarity=similarity
-        ) or _basic_explain_text(
-            bert_risk, matched_reference=bert_result.get("matched_reference", ""), similarity=similarity
-        )
-        logger.info("SBERT used. similarity=%.3f risk=%s", similarity, bert_risk)
+        explanation = (llm_explain(bert_risk, matched_reference=matched_ref, similarity=similarity)
+                       or _basic_explain_text(bert_risk, matched_reference=matched_ref, similarity=similarity))
+        logger.info("SBERT used. similarity=%.3f risk=%s ref=%s", similarity, bert_risk, matched_ref)
         return jsonify(
             {
                 "risk": bert_risk,
                 "advice": advice,
                 "method": "bert",
-                "matched_reference": bert_result.get("matched_reference", ""),
+                "matched_reference": matched_ref,
                 "similarity_score": similarity,
                 "explanation": explanation,
             }
         ), 200
+    else:
+        logger.info(
+            "SBERT skipped/failed. available=%s similarity=%.3f context=%s ref=%s",
+            _bert_available,
+            similarity,
+            has_context,
+            matched_ref,
+        )
 
     # 3) LLM paraphrase (only to normalise text), then re-run Rules + SBERT
     para = llm_paraphrase(text)
@@ -340,25 +408,35 @@ def check_symptoms():
                 }
             ), 200
 
-        bert_result2 = bert_symptom_score(para)
-        similarity2 = float(bert_result2.get("similarity_score", 0.0) or 0.0)
-        bert_risk2 = (bert_result2.get("risk") or "LOW").upper()
+        # Paraphrase then SBERT
+        similarity2 = 0.0
+        bert_risk2 = "LOW"
+        matched_ref2 = ""
         has_context2 = any(w in para.lower() for w in BREAST_CONTEXT)
+
+        if _bert_available:
+            try:
+                bert_result2 = bert_symptom_score(para) or {}
+                similarity2 = float(bert_result2.get("similarity_score") or 0.0)
+                bert_risk2 = str(bert_result2.get("risk") or "LOW").upper()
+                matched_ref2 = str(bert_result2.get("matched_reference") or "")
+            except Exception as e:
+                logger.exception("SBERT error (paraphrase path): %s", e)
+                similarity2 = 0.0
+                bert_risk2 = "LOW"
+                matched_ref2 = ""
 
         if _bert_available and similarity2 >= BERT_CONFIDENCE_THRESHOLD and has_context2:
             advice2 = make_advice(bert_risk2)
-            explanation2 = llm_explain(
-                bert_risk2, matched_reference=bert_result2.get("matched_reference", ""), similarity=similarity2
-            ) or _basic_explain_text(
-                bert_risk2, matched_reference=bert_result2.get("matched_reference", ""), similarity=similarity2
-            )
+            explanation2 = (llm_explain(bert_risk2, matched_reference=matched_ref2, similarity=similarity2)
+                            or _basic_explain_text(bert_risk2, matched_reference=matched_ref2, similarity=similarity2))
             logger.info("Paraphrase→SBERT path used. similarity=%.3f risk=%s", similarity2, bert_risk2)
             return jsonify(
                 {
                     "risk": bert_risk2,
                     "advice": advice2,
                     "method": "bert",
-                    "matched_reference": bert_result2.get("matched_reference", ""),
+                    "matched_reference": matched_ref2,
                     "similarity_score": similarity2,
                     "paraphrased": True,
                     "paraphrase": para,
@@ -380,7 +458,6 @@ def check_symptoms():
     ), 200
 
 
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8000, debug=True)
+# Single server entrypoint (no duplicate runs)
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8000, debug=False, use_reloader=False)
