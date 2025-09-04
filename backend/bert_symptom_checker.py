@@ -1,35 +1,64 @@
 # backend/bert_symptom_checker.py
 from __future__ import annotations
-from pathlib import Path
-import os, json, csv
-import numpy as np
 
-# sentence-transformers is the only external dep for this module
+from pathlib import Path
+import os
+import json
+import csv
+from typing import List, Dict, Tuple, Optional
+
+import numpy as np
 from sentence_transformers import SentenceTransformer
 
+# ----------------------------
 # Globals (lazy-loaded)
-_MODEL: SentenceTransformer | None = None
-_X: np.ndarray | None = None           # (N, D) float32, unit-normalised
-_META: list[dict] | None = None        # length N; each has {"text":..., "risk":...}
+# ----------------------------
+_MODEL: Optional[SentenceTransformer] = None
+_X: Optional[np.ndarray] = None            # (N, D) float32, unit-normalised rows
+_META: Optional[List[Dict]] = None         # length N; each {"text": str, "risk": "LOW|MEDIUM|HIGH"}
+
+# Small safety net if no files/CSV exist
+_OFFLINE_SEED = [
+    {"text": "bloody nipple discharge", "risk": "HIGH"},
+    {"text": "new nipple inversion", "risk": "HIGH"},
+    {"text": "breast skin looks like orange peel", "risk": "HIGH"},
+    {"text": "dimpling or puckering of the breast skin", "risk": "HIGH"},
+    {"text": "redness or a new rash around the nipple", "risk": "HIGH"},
+    {"text": "thickening or hardening in part of the breast", "risk": "HIGH"},
+    {"text": "change in size or shape of one breast", "risk": "MODERATE"},
+    {"text": "lump in the breast", "risk": "HIGH"},
+    {"text": "swelling or lump in the armpit", "risk": "HIGH"},
+    {"text": "persistent breast pain not linked to periods", "risk": "MODERATE"},
+    {"text": "flaky or crusty skin on the nipple", "risk": "MODERATE"},
+]
 
 # ----------------------------
-# Paths & loading
+# Paths & loading helpers
 # ----------------------------
-def _data_dir() -> Path:
-    """Return the project data directory (…/data)."""
-    here = Path(__file__).resolve().parent       # backend/
-    root = here.parent                            # project root
-    d = root / "data"
-    if not d.exists():
-        # also support backend/data as a fallback
-        d2 = here / "data"
-        return d2 if d2.exists() else d
-    return d
+def _candidate_data_dirs() -> List[Path]:
+    """Return both likely data directories, in priority order."""
+    here = Path(__file__).resolve().parent   # backend/
+    root = here.parent                        # project root
+    return [root / "data", here / "data"]
 
-def _index_paths() -> tuple[Path, Path, Path]:
-    """Return paths for index.npz, meta.json, and exemplars CSV."""
-    d = _data_dir()
-    return d / "sbert_index.npz", d / "sbert_meta.json", d / "exemplar_paraphrases.csv"
+def _choose_data_dir() -> Path:
+    """
+    Pick the data dir that already has an index; otherwise the first that exists;
+    otherwise the first candidate (root/data).
+    """
+    candidates = _candidate_data_dirs()
+    for d in candidates:
+        if (d / "sbert_index.npz").exists() and (d / "sbert_meta.json").exists():
+            return d
+    for d in candidates:
+        if d.exists():
+            return d
+    return candidates[0]
+
+def _index_paths() -> Tuple[Path, Path, Path]:
+    """Paths for the index, metadata, and exemplar CSV in the chosen data dir."""
+    d = _choose_data_dir()
+    return (d / "sbert_index.npz", d / "sbert_meta.json", d / "exemplar_paraphrases.csv")
 
 def _load_model() -> SentenceTransformer:
     global _MODEL
@@ -38,34 +67,38 @@ def _load_model() -> SentenceTransformer:
         _MODEL = SentenceTransformer(model_name)
     return _MODEL
 
-def _ensure_index_loaded():
-    """Load (or build) the SBERT index + meta into globals."""
+def _ensure_index_loaded() -> None:
+    """
+    Load (or build) the SBERT index & meta into globals:
+      1) Prefer prebuilt: sbert_index.npz + sbert_meta.json (in /data or /backend/data)
+      2) Else build from exemplar_paraphrases.csv (if present & non-empty)
+      3) Else build from _OFFLINE_SEED
+    """
     global _X, _META
     if _X is not None and _META is not None:
         return
 
     index_npz, meta_json, csv_path = _index_paths()
 
+    # 1) Prebuilt index + meta
     if index_npz.exists() and meta_json.exists():
-        # Fast path: load prebuilt
         _X = np.load(index_npz)["X"]
         with open(meta_json, "r", encoding="utf-8") as f:
             _META = json.load(f)
         return
 
-    # Fallback: build from CSV exemplars, then save both files
-    if not csv_path.exists():
-        raise RuntimeError(
-            f"SBERT index not found and exemplar CSV missing:\n  {index_npz}\n  {meta_json}\n  {csv_path}"
-        )
+    # 2) Build from CSV (if available & non-empty)
+    exemplars: List[Dict] = []
+    if csv_path.exists():
+        exemplars = _read_exemplars(csv_path)
 
-    exemplars = _read_exemplars(csv_path)
+    # 3) Fallback to seed if CSV missing/empty
     if not exemplars:
-        raise RuntimeError(f"No exemplars found in {csv_path}")
+        exemplars = list(_OFFLINE_SEED)
 
     model = _load_model()
     texts = [e["text"] for e in exemplars]
-    embs = model.encode(texts, normalize_embeddings=True)  # (N, D) already L2-normalised
+    embs = model.encode(texts, normalize_embeddings=True)  # list[(D,)]
     X = np.asarray(embs, dtype=np.float32)
 
     # Save for reuse
@@ -79,58 +112,53 @@ def _ensure_index_loaded():
 # ----------------------------
 # CSV helpers
 # ----------------------------
-def _read_exemplars(csv_path: Path) -> list[dict]:
+def _read_exemplars(csv_path: Path) -> List[Dict]:
     """
-    Read exemplar_paraphrases.csv and return a list of dicts with at least:
-      {"text": "...", "risk": "LOW|MEDIUM|HIGH"}
-    Accepts flexible column names:
+    Read exemplar_paraphrases.csv and return [{"text": "...", "risk": "..."}].
+    Flexible headers:
       text: one of ["text", "exemplar", "phrase"]
       risk: one of ["risk", "severity", "label"]
     """
     text_keys = ("text", "exemplar", "phrase")
     risk_keys = ("risk", "severity", "label")
 
-    exemplars: list[dict] = []
+    out: List[Dict] = []
     with open(csv_path, "r", encoding="utf-8") as f:
         rdr = csv.DictReader(f)
+        if not rdr.fieldnames:
+            return out
         for row in rdr:
-            # find columns
-            t = _first_key(row, text_keys)
-            r = _first_key(row, risk_keys)
-            text = (row.get(t) or "").strip()
-            risk = (row.get(r) or "LOW").strip().upper()
-            if not text:
+            t_key = _first_present_key(row, text_keys)
+            r_key = _first_present_key(row, risk_keys)
+            t = (row.get(t_key) or "").strip()
+            r = (row.get(r_key) or "LOW").strip().upper()
+            if not t:
                 continue
-            if risk not in ("LOW", "MEDIUM", "HIGH"):
-                risk = "LOW"
-            exemplars.append({"text": text, "risk": risk})
-    return exemplars
+            if r not in ("LOW", "MEDIUM", "HIGH"):
+                r = "LOW"
+            out.append({"text": t, "risk": r})
+    return out
 
-def _first_key(row: dict, keys: tuple[str, ...]) -> str:
-    for k in keys:
+def _first_present_key(row: Dict, candidates: Tuple[str, ...]) -> str:
+    for k in candidates:
         if k in row:
             return k
-    # default to first key if none match
-    return keys[0]
+    return candidates[0]
 
 # ----------------------------
 # Cosine & scoring
 # ----------------------------
 def _cosine_query_to_matrix(u: np.ndarray, V: np.ndarray) -> np.ndarray:
-    """
-    V is (N, D) unit-normalised; u is (D,) unit-normalised.
-    Returns cosine similarities (N,).
-    """
+    """Cosine similarity between query u (D,) and matrix V (N, D)."""
     u = u / (np.linalg.norm(u) + 1e-12)
     return (V @ u).astype(float)
 
 # ----------------------------
 # Public API
 # ----------------------------
-def bert_symptom_score(text: str) -> dict:
+def bert_symptom_score(text: str) -> Dict:
     """
-    Return SBERT similarity decision for free-text symptoms.
-    Output:
+    Return nearest exemplar decision for free-text symptoms:
       {
         "risk": "LOW|MEDIUM|HIGH",
         "matched_reference": "<nearest exemplar text>",
@@ -140,13 +168,13 @@ def bert_symptom_score(text: str) -> dict:
     _ensure_index_loaded()
     model = _load_model()
 
-    emb = model.encode([text], normalize_embeddings=True)[0]  # (D,)
-    sims = _cosine_query_to_matrix(emb, _X)                   # type: ignore[arg-type]
-    idx = int(np.argmax(sims))
-    best = _META[idx]                                         # type: ignore[index]
+    emb = model.encode([text], normalize_embeddings=True)[0]     # (D,)
+    sims = _cosine_query_to_matrix(emb, _X)                      # type: ignore[arg-type]
+    i = int(np.argmax(sims))
+    best = _META[i] if (isinstance(_META, list) and 0 <= i < len(_META)) else {}
 
     return {
         "risk": best.get("risk", "LOW"),
         "matched_reference": best.get("text", ""),
-        "similarity_score": float(sims[idx]),
+        "similarity_score": float(sims[i]),
     }

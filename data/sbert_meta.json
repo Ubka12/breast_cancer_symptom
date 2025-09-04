@@ -1,58 +1,54 @@
 [
   {
-    "text": "bloody nipple discharge",
+    "text": "pea-sized hard lump",
+    "risk": "LOW"
+  },
+  {
+    "text": "hard knot in my breast",
+    "risk": "LOW"
+  },
+  {
+    "text": "swelling under my arm",
+    "risk": "LOW"
+  },
+  {
+    "text": "nipple leaking blood",
+    "risk": "LOW"
+  },
+  {
+    "text": "skin looks dimpled",
+    "risk": "LOW"
+  },
+  {
+    "text": "nipple turned in",
+    "risk": "LOW"
+  },
+  {
+    "text": "constant breast pain",
+    "risk": "LOW"
+  },
+  {
+    "text": "niple discharge",
+    "risk": "LOW"
+  },
+  {
+    "text": "my nipple looks flatter than usual on one side",
     "risk": "HIGH"
   },
   {
-    "text": "new nipple inversion",
-    "risk": "LOW"
-  },
-  {
-    "text": "breast skin looks like orange peel (peau d'orange)",
+    "text": "nipple seems pressed in on one breast",
     "risk": "HIGH"
   },
   {
-    "text": "dimpling or puckering of the breast skin",
+    "text": "the area around the nipple caves in slightly",
     "risk": "HIGH"
   },
   {
-    "text": "redness or a new rash around the nipple",
-    "risk": "LOW"
-  },
-  {
-    "text": "thickening or hardening in part of the breast",
-    "risk": "LOW"
-  },
-  {
-    "text": "change in size or shape of one breast",
-    "risk": "MEDIUM"
-  },
-  {
-    "text": "lump in the breast",
+    "text": "a small groove appears near the nipple",
     "risk": "HIGH"
   },
   {
-    "text": "swelling or lump in the armpit",
+    "text": "one breast looks slightly puckered compared to the other",
     "risk": "HIGH"
-  },
-  {
-    "text": "persistent breast pain not linked to periods",
-    "risk": "MEDIUM"
-  },
-  {
-    "text": "flaky or crusty skin on the nipple",
-    "risk": "LOW"
-  },
-  {
-    "text": "hot inflamed breast skin",
-    "risk": "LOW"
-  },
-  {
-    "text": "clear nipple discharge",
-    "risk": "LOW"
-  },
-  {
-    "text": "itchy breast skin",
-    "risk": "LOW"
   }
 ]

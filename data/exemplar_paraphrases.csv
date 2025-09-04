@@ -1,9 +1,14 @@
-variant,maps_to,category,rationale,source_url,created_at,author
-"pea-sized hard lump","breast lump","metaphor/size","Lay sizing metaphor; preserves 'hard lump' concept","https://www.nhs.uk/conditions/breast-cancer-in-women/symptoms-of-breast-cancer-in-women/","2025-09-01","AB"
-"hard knot in my breast","breast lump","colloquial","'Knot' used for palpable lump","https://www.nhs.uk/conditions/breast-cancer-in-women/symptoms-of-breast-cancer-in-women/","2025-09-01","AB"
-"swelling under my arm","armpit swelling","colloquial","Axilla phrased in lay terms","https://www.nhs.uk/conditions/breast-cancer-in-women/symptoms-of-breast-cancer-in-women/","2025-09-01","AB"
-"nipple leaking blood","bloody nipple discharge","colloquial","Colloquial verb for discharge","https://www.nhs.uk/conditions/breast-cancer-in-women/symptoms-of-breast-cancer-in-women/","2025-09-01","AB"
-"skin looks dimpled","skin dimpling","colloquial","Plain description of peau d’orange","https://www.nhs.uk/conditions/breast-cancer-in-women/symptoms-of-breast-cancer-in-women/","2025-09-01","AB"
-"nipple turned in","nipple inversion","colloquial","Everyday phrasing for inversion","https://www.nhs.uk/conditions/breast-cancer-in-women/symptoms-of-breast-cancer-in-women/","2025-09-01","AB"
-"constant breast pain","persistent breast pain","hedge/intensity","Maps ongoing pain concept","https://www.nhs.uk/conditions/breast-cancer-in-women/symptoms-of-breast-cancer-in-women/","2025-09-01","AB"
-"niple discharge","nipple discharge","misspelling","1-edit typo variant","https://www.nhs.uk/conditions/breast-cancer-in-women/symptoms-of-breast-cancer-in-women/","2025-09-01","AB"
+text,risk
+pea-sized hard lump,LOW
+hard knot in my breast,LOW
+swelling under my arm,LOW
+nipple leaking blood,LOW
+skin looks dimpled,LOW
+nipple turned in,LOW
+constant breast pain,LOW
+niple discharge,LOW
+my nipple looks flatter than usual on one side,HIGH
+nipple seems pressed in on one breast,HIGH
+the area around the nipple caves in slightly,HIGH
+a small groove appears near the nipple,HIGH
+one breast looks slightly puckered compared to the other,HIGH

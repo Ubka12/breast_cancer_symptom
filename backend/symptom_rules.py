@@ -17,9 +17,15 @@ RAW_PATTERNS: List[Tuple[str, int, str]] = [
      4, "skin changes (dimpling/orange-peel/redness)"),
 
     # ---- MODERATE (visible/structural changes without “new”) ----
-    # Inversion without “new/recent”
-    (rf"(?=.*\bnipple\b)(?=.*\b(invert(?:ed|ing)?|pulled\s*in|retract(?:ed|ing)?|turned\s*in(?:ward|wards)?|pointing\s*in|gone\s*in)\b)",
-     3, "nipple inversion/retraction"),
+   # Nipple inversion/retraction (generic pattern)
+(r"(?=.*\bnipples?\b)(?=.*\b("
+ r"invert(?:ed|ing)?|"
+ r"retract(?:ed|ing)?|"
+ r"turn(?:ed|ing)\s*in(?:ward|wards)?|"
+ r"pull(?:ed|ing)\s*in|"
+ r"point(?:ing|ed)?\s*in(?:ward|wards)?|"
+ r"gone\s*in|going\s*in"
+ r")\b)", 3, "nipple inversion/retraction"),
 
     # Clear discharge with concerning features (one-sided or spontaneous)
     (rf"(?=.*\b(nipple|breast)\b)(?=.*\b(discharge|leak(?:ing)?|fluid)\b)"
@@ -60,12 +66,19 @@ OVERRIDES_RAW: List[Tuple[str, str]] = [
     # Bloody nipple discharge – always HIGH
     (rf"(?=.*\b(nipple|breast)\b)(?=.*\b(discharge|leak(?:ing)?|fluid)\b)(?=.*\b(blood|bloody|red)\b)",
      "bloody nipple discharge (override)"),
+# NEW nipple inversion → always HIGH
+(r"(?=.*\bnipples?\b)"
+ r"(?=.*\b(new|recent|recently|sudden(?:ly)?|just|started)\b)"
+ r"(?=.*\b("
+ r"invert(?:ed|ing)?|"
+ r"retract(?:ed|ing)?|"
+ r"turn(?:ed|ing)\s*in(?:ward|wards)?|"
+ r"pull(?:ed|ing)\s*in|"
+ r"point(?:ing|ed)?\s*in(?:ward|wards)?|"
+ r"gone\s*in|going\s*in"
+ r")\b)",
+ "new nipple inversion/retraction (override)"),
 
-    # NEW inversion → HIGH
-    (rf"(?=.*\bnipple\b)"
-     rf"(?=.*\b(new|recent|recently|sudden(?:ly)?|just|suddenly|started|began)\b)"
-     rf"(?=.*\b(invert(?:ed|ing)?|pulled\s*in|retract(?:ed|ing)?|turned\s*in(?:ward|wards)?|pointing\s*in|gone\s*in)\b)",
-     "new nipple inversion/retraction (override)"),
 
     # Inversion + any discharge together → HIGH
     (rf"(?=.*\bnipple\b)(?=.*\b(invert(?:ed|ing)?|pulled\s*in|retract(?:ed|ing)?|turned\s*in(?:ward|wards)?|gone\s*in)\b)"
