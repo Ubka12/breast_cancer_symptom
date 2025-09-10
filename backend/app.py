@@ -1,4 +1,11 @@
 # backend/app.py
+# ------------------------------------------------------------
+# Breast symptom checker API
+# Flow: Rules  ➜  SBERT (if confident)  ➜  Paraphrase+retry  ➜  LLM fallback
+# - Input: expects JSON {"symptoms": "<free text>"} from the UI
+# - Output: JSON with risk, advice, method, and evidence fields
+# ------------------------------------------------------------
+
 from __future__ import annotations
 
 import os
@@ -11,39 +18,45 @@ from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 
 # ============================
-# Config / Logging
+# Settings & logging
 # ============================
+# Basic console logging; level can be set with APP_LOG_LEVEL=DEBUG/INFO/...
 APP_LOG_LEVEL = os.getenv("APP_LOG_LEVEL", "INFO").upper()
-logging.basicConfig(level=getattr(logging, APP_LOG_LEVEL, logging.INFO),
-                    format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=getattr(logging, APP_LOG_LEVEL, logging.INFO),
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
 logger = logging.getLogger(__name__)
 
-# Guard against very long payloads
+# Simple input limits so we only handle a short symptom description
 MAX_INPUT_CHARS = 800
-# Minimal input (both checks used)
+# We treat very short inputs as "not enough detail" unless they pass either check:
 MIN_WORDS = int(os.getenv("MIN_WORDS", "2"))
 MIN_CHARS = int(os.getenv("MIN_CHARS", "6"))
 
-# τ in the paper; configurable via env SBERT_TAU. Default 0.75
+# SBERT decision threshold τ (tau). If similarity ≥ τ and context is present, accept SBERT.
 BERT_CONFIDENCE_THRESHOLD = float(os.getenv("SBERT_TAU", "0.75"))
+
+# Words that indicate we are indeed talking about breast context
 BREAST_CONTEXT = ("breast", "nipple", "boob", "areola", "underarm", "armpit", "chest")
 
 # ============================
-# Helpers
+# Small helpers
 # ============================
 def sanitize_user_text(text: str) -> str:
-    """Remove control chars, collapse whitespace, trim length."""
+    """Tidy up user text: strip control chars, collapse spaces, clamp length."""
     if not text:
         return ""
-    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)  # control chars
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)  # remove control chars
     text = re.sub(r"\s+", " ", text)  # collapse whitespace
     return text.strip()[:MAX_INPUT_CHARS]
 
 def _parse_origins(val: str) -> List[str]:
+    """Turn a comma-separated env string into a list of allowed origins."""
     return [o.strip() for o in (val or "").split(",") if o.strip()]
 
 def _terms_from_matches(matches) -> str:
-    """Readable list of matched terms (from rules or SBERT)."""
+    """Make a short, readable list from rule/SBERT matches for explanations."""
     out = []
     for m in matches or []:
         if isinstance(m, dict):
@@ -53,15 +66,16 @@ def _terms_from_matches(matches) -> str:
     return ", ".join(out)
 
 def _safe_clip(text: str, limit: int = 600) -> str:
+    """Clip arbitrary text for prompts/logs."""
     text = (text or "").strip()
     return text[:limit]
 
 # ============================
-# Flask app + CORS
+# Flask app & CORS
 # ============================
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
-# Lock CORS to explicit origins (include common local dev ports)
+# Allow only local dev origins for the /check API
 ALLOWED_ORIGINS = _parse_origins(
     os.getenv(
         "ALLOWED_ORIGINS",
@@ -79,11 +93,11 @@ CORS(
         }
     },
 )
-# Cap payload size: a couple of sentences
+# Hard cap: we only accept a few KB per request
 app.config["MAX_CONTENT_LENGTH"] = 4 * 1024
 
 # ============================
-# Optional .env
+# Optional .env loader (no-op if missing)
 # ============================
 try:
     from dotenv import load_dotenv  # type: ignore
@@ -92,14 +106,16 @@ except Exception:
     pass
 
 # ============================
-# Imports (relative or absolute)
+# Imports (work both as package or flat files)
 # ============================
 try:
     from .symptom_rules import rule_based_score, classify_risk  # type: ignore
 except Exception:
     from symptom_rules import rule_based_score, classify_risk  # type: ignore
 
-# SBERT similarity module
+# ============================
+# SBERT similarity (optional; we degrade gracefully if unavailable)
+# ============================
 _bert_available = True
 try:
     try:
@@ -110,7 +126,8 @@ except Exception as e:
     _bert_available = False
     logger.warning("SBERT module unavailable: %s", e)
 
-    def bert_symptom_score(text: str) -> Dict[str, Any]:  # graceful stub
+    # If SBERT isn't installed, provide a stub that always returns LOW.
+    def bert_symptom_score(text: str) -> Dict[str, Any]:
         return {
             "risk": "LOW",
             "matched_reference": "",
@@ -119,7 +136,8 @@ except Exception as e:
         }
 
 # ============================
-# Local FREE text2text (T5-small) for paraphrase/explain — no risk
+# Local text2text (T5-small) to paraphrase/explain only
+# This does not set risk. It helps normalise wording and produce a short explanation.
 # ============================
 _local_t5_ok = True
 _t5_pipe = None
@@ -127,14 +145,14 @@ try:
     from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline as hf_pipeline  # type: ignore
     _t5_tok = AutoTokenizer.from_pretrained("t5-small")
     _t5_model = AutoModelForSeq2SeqLM.from_pretrained("t5-small")
-    _t5_pipe = hf_pipeline("text2text-generation", model=_t5_model, tokenizer=_t5_tok, device=-1)  # CPU
+    _t5_pipe = hf_pipeline("text2text-generation", model=_t5_model, tokenizer=_t5_tok, device=-1)  # CPU-only
 except Exception as e:
     logger.warning("T5-small unavailable (paraphrase/explain will fall back): %s", e)
     _local_t5_ok = False
     _t5_pipe = None
 
 def llm_paraphrase(user_text: str) -> str | None:
-    """Local paraphrase using T5-small (rewrite only; no risk/diagnosis)."""
+    """Rewrite the user's wording more clearly (no new info, no risk)."""
     if not _local_t5_ok or not user_text:
         return None
     prompt = (
@@ -150,6 +168,7 @@ def llm_paraphrase(user_text: str) -> str | None:
         return None
 
 def _basic_explain_text(risk: str, matches=None, matched_reference=None, similarity=None) -> str:
+    """Plain fallback explanation using the evidence we have."""
     if matches:
         terms = _terms_from_matches(matches)[:120]
         return f"We recognised: {terms}. Based on these, we showed {risk.title()} advice."
@@ -159,7 +178,7 @@ def _basic_explain_text(risk: str, matches=None, matched_reference=None, similar
     return f"We could not match clear red-flag terms; we showed {risk.title()} advice for safety."
 
 def llm_explain(risk: str, matches=None, matched_reference=None, similarity=None) -> str | None:
-    """Local explanation via T5-small using only provided evidence."""
+    """Short, readable explanation (1–2 lines). Uses only given evidence."""
     if not _local_t5_ok:
         return None
     bits = []
@@ -184,7 +203,9 @@ def llm_explain(risk: str, matches=None, matched_reference=None, similarity=None
         return None
 
 # ============================
-# FREE local zero-shot fallback (DistilBERT-MNLI)
+# Local zero-shot classifier (final safety net)
+# If used, this produces LOW/MEDIUM/HIGH from a small NLI model.
+# It is only reached if Rules and SBERT don't apply.
 # ============================
 _zsc_available = True
 _zsc = None
@@ -195,7 +216,7 @@ except Exception:
     zsc_pipeline = None  # type: ignore
 
 def get_zero_shot():
-    """Lazy-load a small, fast NLI model for zero-shot classification."""
+    """Load a compact NLI model on first use."""
     global _zsc
     if _zsc is None and _zsc_available and zsc_pipeline is not None:
         _zsc = zsc_pipeline(
@@ -206,7 +227,7 @@ def get_zero_shot():
     return _zsc
 
 # ============================
-# Advice text
+# Advice text per risk band
 # ============================
 def make_advice(risk: str) -> str:
     r = (risk or "").upper()
@@ -224,7 +245,7 @@ def make_advice(risk: str) -> str:
         return "Your symptoms are less likely to be serious, but contact your GP or NHS 111 if you're unsure."
 
 # ============================
-# Error handler
+# Error handling (catch-all)
 # ============================
 @app.errorhandler(Exception)
 def _any_error(e):
@@ -234,7 +255,7 @@ def _any_error(e):
     return jsonify(error="internal_error"), 500
 
 # ============================
-# Frontend pages + health
+# Simple pages & health checks
 # ============================
 @app.route("/healthz")
 def healthz():
@@ -302,13 +323,14 @@ def legacy_html(page):
     return abort(404)
 
 # ============================
-# Local zero-shot risk (final fallback)
+# Final fallback: quick local classifier
+# (Used only if Rules and SBERT do not produce a decision)
 # ============================
 def local_llm_symptom_score(text: str):
     """
-    Free, local fallback:
-      - Zero-shot classifier chooses: HIGH / MEDIUM / LOW
-      - Guardrail: if no breast-context word, require higher confidence for HIGH/MEDIUM.
+    Zero-shot fallback:
+      - Predicts HIGH / MEDIUM / LOW from short text.
+      - If no breast words are present, we are stricter about raising risk.
     """
     zsc = get_zero_shot()
     if not zsc:
@@ -328,26 +350,27 @@ def local_llm_symptom_score(text: str):
     return {"risk": top_label, "advice": make_advice(top_label), "llm_raw": f"zero-shot {ordered}"}
 
 # ============================
-# API
+# /check API: main decision flow
 # ============================
 @app.route("/check", methods=["POST"])
 def check_symptoms():
+    # Expect JSON {"symptoms": "..."} from the UI
     data = request.get_json(silent=True) or {}
     raw_text = data.get("symptoms") or ""
     text = sanitize_user_text(raw_text)
 
-    # Debug what we actually received (useful for screenshots)
+    # Log what we received (handy during testing)
     logger.info("[DEBUG] raw=%r | sanitized=%r | len=%d", raw_text, text, len(text))
     logger.info("[DEBUG] _bert_available=%s | τ=%.2f", _bert_available, BERT_CONFIDENCE_THRESHOLD)
 
-    # Short/empty guard (use both words and chars; pass if either is sufficient)
+    # Guard: if too short, ask the user for more words
     if (len(text.split()) < MIN_WORDS) and (len(text) < MIN_CHARS):
         logger.debug("Empty/too short input; returning none path.")
         return jsonify(
             {"risk": "LOW", "advice": "Please describe your symptoms using a few words.", "method": "none"}
         ), 200
 
-    # 1) Rule-based first (transparent & fast)
+    # ---- Stage 1: Rule-based (transparent & fast) ----
     score, matches = rule_based_score(text)
     if score > 0:
         risk = classify_risk(score)
@@ -365,7 +388,7 @@ def check_symptoms():
             }
         ), 200
 
-    # 2) SBERT fallback (only if available, confident, and breast context present)
+    # ---- Stage 2: SBERT (if installed, confident, and breast context present) ----
     similarity = 0.0
     bert_risk = "LOW"
     matched_ref = ""
@@ -410,9 +433,10 @@ def check_symptoms():
             matched_ref,
         )
 
-    # 3) LLM paraphrase (only to normalise text), then re-run Rules + SBERT
+    # ---- Stage 3: Paraphrase then retry Rules/SBERT (normalises wording only) ----
     para = llm_paraphrase(text)
     if para and para.lower() != text.lower():
+        # 3a) Rules on paraphrased text
         score2, matches2 = rule_based_score(para)
         if score2 > 0:
             risk2 = classify_risk(score2)
@@ -432,7 +456,7 @@ def check_symptoms():
                 }
             ), 200
 
-        # Paraphrase then SBERT
+        # 3b) SBERT on paraphrased text
         similarity2 = 0.0
         bert_risk2 = "LOW"
         matched_ref2 = ""
@@ -471,24 +495,26 @@ def check_symptoms():
                 }
             ), 200
 
-    # 4) Final fallback — local zero-shot classification
+    # ---- Stage 4: Final fallback (local zero-shot classifier) ----
     llm_result = local_llm_symptom_score(text)
     logger.info("Local zero-shot fallback used. risk=%s", llm_result.get("risk"))
     return jsonify(
         {
             "risk": llm_result.get("risk", "LOW"),
             "advice": llm_result.get("advice", ""),
-            "method": "llm",  # keep 'llm' so your UI doesn't change
+            "method": "llm",  # keep 'llm' so your UI stays consistent
             "llm_raw": llm_result.get("llm_raw", ""),
             "explanation": _basic_explain_text(llm_result.get("risk", "LOW")),
         }
     ), 200
 
 # ============================
-# Entrypoint
+# Entrypoint for local dev
 # ============================
 if __name__ == "__main__":
     logger.info("Allowed CORS origins: %s", ALLOWED_ORIGINS)
-    logger.info("SBERT available=%s | τ=%.2f | MIN_WORDS=%d | MIN_CHARS=%d",
-                _bert_available, BERT_CONFIDENCE_THRESHOLD, MIN_WORDS, MIN_CHARS)
+    logger.info(
+        "SBERT available=%s | τ=%.2f | MIN_WORDS=%d | MIN_CHARS=%d",
+        _bert_available, BERT_CONFIDENCE_THRESHOLD, MIN_WORDS, MIN_CHARS
+    )
     app.run(host="127.0.0.1", port=8000, debug=False, use_reloader=False)

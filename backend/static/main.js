@@ -1,16 +1,19 @@
 // backend/static/main.js
+// Handles the form submit, calls /check, and renders the result.
+
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("symptom-form");
   const resultDiv = document.getElementById("result");
   const textarea = document.getElementById("symptoms");
   if (!form || !resultDiv) return;
 
-  // ---- helpers ----
+  // Escape HTML so user text can't break the page
   const esc = (s) =>
-    String(s ?? "").replace(/[&<>"']/g, m => (
-      {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]
+    String(s ?? "").replace(/[&<>"']/g, (m) => (
+      { "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]
     ));
 
+  // Display-friendly names for backend method codes
   const niceMethod = (m) => {
     const key = String(m || "").toLowerCase();
     if (key === "rule-based") return "Recognised terms";
@@ -19,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return "Automated check";
   };
 
+  // Choose colour/style based on risk
   const riskMeta = (r) => {
     const R = String(r || "LOW").toUpperCase();
     return {
@@ -28,13 +32,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }[R] || { label: R, cls: "is-low" };
   };
 
-  // ---- renderer ----
+  // Turn a rule match (which may be an object) into a short label
+  function ruleLabel(x) {
+    if (typeof x === "string") return x;
+    if (x && typeof x === "object") {
+      return x.term || x.keyword || x.pattern || x.rule || x.name || JSON.stringify(x);
+    }
+    return "";
+  }
+
+  // Pick the best evidence field from the response and normalise to text labels
+  function toEvidenceLabels(data) {
+    let raw = [];
+    if (Array.isArray(data.noticed)) raw = data.noticed;                 // optional convenience field
+    else if (Array.isArray(data.matched_rules)) raw = data.matched_rules; // rule-based path
+    else if (Array.isArray(data.matches)) raw = data.matches;             // alternate name
+    let labels = raw.map(ruleLabel).filter(Boolean);
+
+    // If BERT path had no labels, fall back to the matched reference text
+    if (!labels.length && String(data.method).toLowerCase() === "bert" && data.matched_reference) {
+      labels = [String(data.matched_reference)];
+    }
+    return labels;
+  }
+
+  // Build the HTML for the result panel
   function renderResult(data) {
     const risk    = riskMeta(data.risk);
     const method  = String(data.method || "");
     const advice  = String(data.advice || "");
-    const matched = Array.isArray(data.matched_rules) ? data.matched_rules : [];
     const sim     = typeof data.similarity_score === "number" ? data.similarity_score : null;
+    const labels  = toEvidenceLabels(data); // ← fixes the “[object Object]” issue
 
     resultDiv.innerHTML = `
       <article class="result-panel ${risk.cls}" aria-live="polite" aria-atomic="true">
@@ -49,11 +77,11 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="rp-body">
           <p class="rp-next">${esc(advice)}</p>
 
-          ${matched.length ? `
+          ${labels.length ? `
             <section class="rp-evidence">
               <h4>What we noticed</h4>
               <div class="pill-row">
-                ${matched.map(m => `<span class="pill">${esc(m)}</span>`).join("")}
+                ${labels.map(t => `<span class="pill">${esc(t)}</span>`).join("")}
               </div>
             </section>` : ""}
 
@@ -63,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-  // ---- submit handler ----
+  // Submit the form, call /check, and show the result
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const symptoms = (textarea?.value || "").trim();
